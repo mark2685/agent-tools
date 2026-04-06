@@ -1,0 +1,31 @@
+{
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "filepath=\"$CLAUDE_FILE_PATH\"; case \"$filepath\" in */lib/openapi/*|*/gen/*|*/generated/*|*.env|*.env.*|*/pnpm-lock.yaml|*/.github/*) echo 'BLOCK: This is a generated, environment, lock, or CI file — do not edit manually.' >&2; exit 1;; *) exit 0;; esac"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "filepath=\"$CLAUDE_FILE_PATH\"; case \"$filepath\" in *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.json|*.css|*.md|*.yaml|*.yml) cd \"$PROJECT_ROOT\" && pnpm prettier --write \"$filepath\" 2>/dev/null || true;; *) exit 0;; esac"
+          }
+        ]
+      }
+    ]
+  }
+}
