@@ -1,4 +1,8 @@
 {
+  "_comment": "Dependency: jq (Claude Code passes hook input as JSON on stdin). Every hook prechecks for jq: the Edit|Write hooks exit 2 with a distinct HOOK ERROR if it is missing; the Skill logger silently skips. Exit-code semantics: in PreToolUse, exit 2 is the only code that BLOCKS the tool call — exit 1 is a non-blocking error and the edit would still proceed. The PostToolUse formatter only touches files inside $CLAUDE_PROJECT_DIR, so edits to sibling repos in a multi-repo workspace are never reformatted under flow-frontend's Prettier config.",
+  "_comment_blocklist": "The PreToolUse guard blocks two categories with category-accurate messages: generated/lock/CI files (do not edit manually — regenerate instead) and env files (user-managed local config/secrets — ask the user to edit them). Exception: .env.development is exempt because the e2e-test-fixture skill and the workspace docs instruct editing it for local auth (e.g. OKTA_ISSUER).",
+  "_comment_skill_log": "The PreToolUse Skill hook appends one JSON line {skill, ts} per skill invocation to $CLAUDE_PROJECT_DIR/.claude/skill-usage.jsonl so under-triggered skills can be spotted. It is fail-open: any failure (missing jq, unset CLAUDE_PROJECT_DIR, unparseable input) still exits 0 — logging never blocks a tool call. Add .claude/skill-usage.jsonl to the target project's .gitignore.",
+  "_comment_plugins": "enabledPlugins are Claude Code marketplace plugins: frontend-design = Figma/visual design inspection for the design-reviewer and ui-builder workflows; playwright = the playwright-test MCP server the playwright-* agents require; typescript-lsp = TypeScript language-server intellisense. Verify these marketplace names against your Claude Code plugin directory before enabling.",
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "playwright@claude-plugins-official": true,
@@ -11,18 +15,27 @@
         "hooks": [
           {
             "type": "command",
-            "command": "filepath=\"$CLAUDE_FILE_PATH\"; case \"$filepath\" in */lib/openapi/*|*/gen/*|*/generated/*|*.env|*.env.*|*/pnpm-lock.yaml|*/.github/*) echo 'BLOCK: This is a generated, environment, lock, or CI file — do not edit manually.' >&2; exit 1;; *) exit 0;; esac"
+            "command": "if ! command -v jq >/dev/null 2>&1; then echo 'HOOK ERROR: jq is not installed — required to parse hook input. Install jq (brew install jq).' >&2; exit 2; fi; input=$(cat); filepath=$(printf '%s' \"$input\" | jq -r '.tool_input.file_path // empty'); if [ -z \"$filepath\" ]; then echo 'HOOK ERROR: could not read .tool_input.file_path from stdin JSON — Claude Code hook input format may have changed. Failing loudly rather than skipping the generated-file guard.' >&2; exit 2; fi; case \"$filepath\" in *.env.development) exit 0;; */lib/openapi/*|*/generated/*|*/examples/gen/*|*/pnpm-lock.yaml|*/.github/*) echo 'BLOCK: This is a generated, lock, or CI file — do not edit manually; regenerate it with the appropriate tool instead.' >&2; exit 2;; *.env|*.env.*) echo 'BLOCK: This is an environment file containing user-managed local config/secrets — ask the user to edit it themselves. (Only .env.development is exempt, for local auth setup.)' >&2; exit 2;; *) exit 0;; esac"
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ input=$(cat) && command -v jq >/dev/null 2>&1 && [ -n \"$CLAUDE_PROJECT_DIR\" ] && mkdir -p \"$CLAUDE_PROJECT_DIR/.claude\" && printf '%s' \"$input\" | jq -c 'select(.tool_input.skill != null and .tool_input.skill != \"\") | {skill: .tool_input.skill, ts: (now | todate)}' >> \"$CLAUDE_PROJECT_DIR/.claude/skill-usage.jsonl\"; } 2>/dev/null; exit 0"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|NotebookEdit",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "filepath=\"$CLAUDE_FILE_PATH\"; case \"$filepath\" in *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.json|*.css|*.md|*.yaml|*.yml) cd \"$PROJECT_ROOT\" && pnpm prettier --write \"$filepath\" 2>/dev/null || true;; *) exit 0;; esac"
+            "command": "if ! command -v jq >/dev/null 2>&1; then echo 'HOOK ERROR: jq is not installed — required to parse hook input. Install jq (brew install jq).' >&2; exit 2; fi; input=$(cat); filepath=$(printf '%s' \"$input\" | jq -r '.tool_input.file_path // empty'); if [ -z \"$filepath\" ]; then echo 'HOOK ERROR: could not read .tool_input.file_path from stdin JSON — Claude Code hook input format may have changed. Skipping Prettier silently would hide this, so failing loudly.' >&2; exit 2; fi; if [ -z \"$CLAUDE_PROJECT_DIR\" ]; then echo 'HOOK ERROR: $CLAUDE_PROJECT_DIR is unset — cannot locate the project root for Prettier. The variable name may have changed.' >&2; exit 2; fi; case \"$filepath\" in \"$CLAUDE_PROJECT_DIR\"/*) ;; *) exit 0;; esac; case \"$filepath\" in *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.json|*.css|*.md|*.yaml|*.yml) cd \"$CLAUDE_PROJECT_DIR\" && pnpm prettier --write \"$filepath\";; *) exit 0;; esac"
           }
         ]
       }

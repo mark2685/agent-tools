@@ -1,4 +1,10 @@
-# Accessibility (WCAG 2.1 AA)
+---
+globs:
+  - "apps/**/*.tsx"
+  - "packages/**/*.tsx"
+---
+
+# Accessibility (WCAG 2.2 AA)
 
 Accessibility rules that apply when writing any user-facing component.
 
@@ -21,6 +27,19 @@ Accessibility rules that apply when writing any user-facing component.
 
 - `Dialog` and `Sheet` from `@hadrian-mtv/ui-toolkit` use Radix primitives that handle focus trapping automatically — use these rather than building custom modals
 - When building custom interactive overlays outside of Radix, move focus to the first interactive element on open and return focus to the trigger on close
+
+## WCAG 2.2 criteria
+
+- **SC 2.4.7 Focus Visible (AA) / SC 2.4.11 Focus Not Obscured, Minimum (AA).** A visible keyboard-focus indicator must exist — never `outline: none` without a replacement; use the design-token focus ring — and it must not be entirely hidden by sticky headers, footers, or other author content.
+- **SC 2.4.13 Focus Appearance (AAA).** Beyond mere visibility, the focus indicator should be at least 2px thick around the component's perimeter and meet a 3:1 contrast ratio between its focused and unfocused states. This is a Level **AAA** target, not an AA requirement — we adopt it as our house standard via the design-token focus ring, so do not suppress it.
+- **SC 2.5.8 Target Size, Minimum (AA).** Pointer targets are at least 24×24px, or have 24px of spacing to neighboring targets. Icon buttons (`size="icon"`) already meet this — do not shrink them below 24px. Inline text links are exempt.
+- **SC 2.5.7 Dragging Movements (AA).** Any drag operation (reorder, slider, drag-to-assign) needs a single-pointer alternative — buttons, a menu, or keyboard. Never make a drag the only way to perform an action.
+- **SC 3.3.7 Redundant Entry (A).** Within one multi-step flow, do not ask the user to re-enter information they already provided. Auto-populate or offer a "same as" / select-previous control instead.
+
+## Interactive elements
+
+- Never nest interactive controls (a `<button>` inside a `<button>`, a `<Link>` wrapping a `<Button>`). It breaks keyboard and screen-reader semantics and is invalid HTML. Place sibling controls or split the affordances.
+- A disabled control must convey *why* it is disabled — a tooltip, helper text, or inline message. A silently-disabled button gives the user no path forward.
 
 ## ARIA
 

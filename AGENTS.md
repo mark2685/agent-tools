@@ -63,6 +63,14 @@ color: purple
 - **Frontmatter**: YAML only; required fields: `name`, `description`
 - **No generated files**: Everything is hand-authored
 
+## Maintenance Conventions
+
+- **No hard-coded volatile facts**: lists, names, versions, and inventories are read from the live source at runtime — never snapshotted into asset bodies, because they drift. Model: `buf-bump` reads its service targets from the root `package.json` and says "do not rely on a memorized list"
+- **One owner per convention**: every convention lives in exactly one asset; all others reference it by name, never restate it. Owners: `tanstack-query` (query + query-key conventions), `playwright-test-quality` (e2e quality bar incl. the `test.fixme` policy), `reviewer-reporting-conventions` (severity vocabulary), `accessibility` (WCAG criteria and levels), `react-patterns` (memoization policy), `design-reviewer` (UX-defect checklist + design rubric)
+- **Cross-references use installed paths**: `.claude/rules/<name>.md`, `.claude/agents/<name>.md` — never source-repo paths like `rules/flow-frontend/<name>.md`, which dangle after install
+- **"Append a gotcha" is the default PR type**: skills carry a `## Gotchas` section that accretes entries from real failures — no boilerplate, no invented entries
+- **Declare current vs. target**: a convention asset states whether it describes how the code is today or a standard the code is moving toward
+
 ## Boundaries
 
 - **Always**: validate that `name` and `description` frontmatter exist in new skills

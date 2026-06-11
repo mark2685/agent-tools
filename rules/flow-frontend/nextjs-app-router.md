@@ -1,6 +1,12 @@
+---
+globs:
+  - "apps/**/*.tsx"
+  - "apps/**/*.ts"
+---
+
 # Next.js App Router Patterns
 
-Rules for working with Next.js 15 App Router in this monorepo. Both `flow-global` (port 3000) and `flow-factory` (port 3001) follow these conventions.
+Rules for working with the Next.js App Router (Next 16) — both apps, `flow-global` and `flow-factory`, follow these conventions.
 
 ## Directives
 
@@ -11,7 +17,7 @@ Rules for working with Next.js 15 App Router in this monorepo. Both `flow-global
 - A `'use client'` file makes all its imports client-side too — be intentional about the boundary
 
 ### `'use server'`
-- Used in server action files (`app/_lib/actions.ts`)
+- Used in per-domain server action files under `_lib/actions/` (e.g. `_lib/actions/<domain>.actions.ts`)
 - All server actions must call RPC clients via `@hadrian-mtv/connect-server-actions`
 - Authenticate server actions like public API routes — never rely solely on middleware
 
@@ -45,6 +51,17 @@ export function OrderDetailsClient({ order }: { order: Order }) {
 }
 ```
 
+### Serialize Only What Clients Need
+The RSC boundary serializes every property of an object passed to a client component. Pass only the fields the client uses, not the whole record.
+
+```tsx
+// Incorrect — serializes the entire order
+<OrderDetailsClient order={order} />
+
+// Correct — only the fields the client reads
+<OrderDetailsClient id={order.id} status={order.status} total={order.total} />
+```
+
 ## Data Fetching
 
 ### Prevent Waterfalls
@@ -72,10 +89,17 @@ export default async function Page({ params }: Props) {
 }
 ```
 
+### Never Fetch in `useEffect`
+- Do not fetch data in `useEffect` + `useState`. It re-introduces the waterfall, runs client-side, and skips Suspense/error boundaries.
+- Server-side fetch (RSC / server action) is the default. When data must load on the client, use TanStack Query — never a hand-rolled effect.
+
 ### TanStack Query for Client-Side State
-- Use TanStack Query v5 for all server state on the client
-- Mutations should call server actions, not RPC clients directly
-- Invalidate related queries after mutations
+- Use TanStack Query v5 for client-side server state; mutations call server actions, not RPC clients directly
+- Query definitions, key shape, and invalidation follow the `tanstack-query` rule (installed at `.claude/rules/tanstack-query.md`)
+
+### Caching with Cache Components (Next 16 — not enabled here yet)
+
+Next 16 adds explicit caching via the `'use cache'` directive plus `cacheLife()` (gated by the `cacheComponents` config), superseding experimental PPR. This codebase has **not** enabled `cacheComponents`, so do not add `'use cache'` directives today — server components render dynamically by default. When the apps adopt it, cache at the data-fetch or component boundary and set freshness with `cacheLife('minutes' | 'hours' | …)`; the function's arguments become part of the cache key. Reference: <https://nextjs.org/docs/app/getting-started/caching>.
 
 ## Error Handling
 
@@ -99,13 +123,15 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
 
 ## Hydration Errors
 
-Common causes and fixes:
+Common causes and fixes (none of these is a reason to move data fetching into the client):
 - **Browser extensions** inject DOM nodes — wrap affected components in `Suspense` with a client fallback
-- **Date/time rendering** differs server vs. client — format dates on the server or suppress hydration with `useEffect`
-- **Conditional rendering on `typeof window`** — use `useEffect` + state instead
+- **Date/time rendering** differs server vs. client — format on the server, or add `suppressHydrationWarning` on the single text node that legitimately differs
+- **Conditional rendering on `typeof window`** — render the same markup on both passes; gate the browser-only branch behind a mount flag rather than fetching or branching during render
 - **Invalid HTML nesting** (e.g., `<p>` inside `<p>`, `<div>` inside `<p>`) — fix the markup
 
-## Async Patterns (Next.js 15+)
+To track down a hydration mismatch systematically, use the `systematic-debug` skill — do not inline the debugging steps here.
+
+## Async Patterns (Next 16)
 
 - `params` and `searchParams` are now Promises — always `await` them:
   ```tsx
@@ -119,7 +145,11 @@ Common causes and fixes:
 ## Route Organization
 
 - Co-locate domain logic in `_lib/` directories adjacent to the page
-- `_lib/actions.ts` for server actions
-- `_lib/queries.ts` for TanStack Query hooks
+- `_lib/actions/` — per-domain server action files (`<domain>.actions.ts`), not a single `actions.ts`
+- `_lib/queries.ts` for TanStack Query definitions and hooks (conventions in the `tanstack-query` rule, installed at `.claude/rules/tanstack-query.md`)
 - `_lib/components/` for page-specific components
 - Shared cross-domain logic goes in `app/_lib/` or `lib/` at the app root
+
+## Boundaries
+
+- No flow-global cross-cluster fetching: `flow-global` must not reach into a factory cluster's data directly. Cross-cluster data is aggregated on the backend and exposed as a single API — not stitched together with per-cluster requests from the frontend.

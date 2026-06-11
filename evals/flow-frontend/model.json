@@ -1,0 +1,5 @@
+{
+  "judge_model": "claude-opus-4-8",
+  "pinned": "2026-06-11",
+  "rationale": "re-baseline deliberately on model upgrades"
+}

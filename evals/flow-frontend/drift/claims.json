@@ -1,0 +1,223 @@
+{
+  "_schema": "See evals/README.md. Each claim: {id, asset, claim, check}. check.type is one of path-exists | grep | package-script | pkg-version-major. Targets are relative to the flow-frontend repo root; the runner checks them against flow-frontend HEAD.",
+  "verified": "2026-06-11",
+  "claims": [
+    {
+      "id": "pkg-form-protoc-gen-es-required",
+      "asset": "rules/flow-frontend/protobuf.md",
+      "claim": "Required-field proto packages follow the form @bufteam/hadrian_<service>.hadrian_protoc-gen-es-required",
+      "check": {
+        "type": "grep",
+        "target": "pnpm-workspace.yaml",
+        "pattern": "@bufteam/hadrian_[a-z0-9-]+\\.hadrian_protoc-gen-es-required",
+        "expect": true
+      }
+    },
+    {
+      "id": "script-lint-tsc",
+      "asset": "rules/flow-frontend/dependencies.md",
+      "claim": "Root script lint:tsc exists (also referenced by buf-bump, new-page, proto-migration, add-server-action, systematic-debug, receiving-code-review skills and the ui-builder agent)",
+      "check": { "type": "package-script", "target": "lint:tsc", "expect": true }
+    },
+    {
+      "id": "script-build-typesafe-url",
+      "asset": "skills/flow-frontend/new-page/SKILL.md",
+      "claim": "Root script build:typesafe-url exists (run after adding/removing pages)",
+      "check": { "type": "package-script", "target": "build:typesafe-url", "expect": true }
+    },
+    {
+      "id": "script-buf-bump-main",
+      "asset": "skills/flow-frontend/buf-bump/SKILL.md",
+      "claim": "Root script buf-bump:main exists",
+      "check": { "type": "package-script", "target": "buf-bump:main", "expect": true }
+    },
+    {
+      "id": "script-buf-bump-service-alias",
+      "asset": "skills/flow-frontend/buf-bump/SKILL.md",
+      "claim": "Per-service buf-bump:<alias> scripts exist (fes as representative; the skill reads the live list from package.json at runtime)",
+      "check": { "type": "package-script", "target": "buf-bump:fes", "expect": true }
+    },
+    {
+      "id": "vitest-swc-flow-global",
+      "asset": "skills/flow-frontend/frontend-testing/SKILL.md",
+      "claim": "flow-global's vitest config uses @vitejs/plugin-react-swc",
+      "check": {
+        "type": "grep",
+        "target": "apps/flow-global/vitest.config.ts",
+        "pattern": "@vitejs/plugin-react-swc",
+        "expect": true
+      }
+    },
+    {
+      "id": "vitest-swc-flow-factory",
+      "asset": "skills/flow-frontend/frontend-testing/SKILL.md",
+      "claim": "flow-factory's vitest config uses @vitejs/plugin-react-swc",
+      "check": {
+        "type": "grep",
+        "target": "apps/flow-factory/vitest.config.ts",
+        "pattern": "@vitejs/plugin-react-swc",
+        "expect": true
+      }
+    },
+    {
+      "id": "path-ui-toolkit-button",
+      "asset": "agents/flow-frontend/design-reviewer.md",
+      "claim": "packages/ui-toolkit/src/button.tsx exists (source of truth for button variants)",
+      "check": { "type": "path-exists", "target": "packages/ui-toolkit/src/button.tsx", "expect": true }
+    },
+    {
+      "id": "path-flow-global-app-dir",
+      "asset": "agents/flow-frontend/domain-boundary-reviewer.md",
+      "claim": "apps/flow-global/app exists (domain source — route groups are read from the live tree, not a memorized list)",
+      "check": { "type": "path-exists", "target": "apps/flow-global/app", "expect": true }
+    },
+    {
+      "id": "path-flow-factory-app-dir",
+      "asset": "agents/flow-frontend/domain-boundary-reviewer.md",
+      "claim": "apps/flow-factory/app exists (domain source)",
+      "check": { "type": "path-exists", "target": "apps/flow-factory/app", "expect": true }
+    },
+    {
+      "id": "path-flow-global-eslint-config",
+      "asset": "agents/flow-frontend/domain-boundary-reviewer.md",
+      "claim": "apps/flow-global/eslint.config.mjs exists (boundary-rule source)",
+      "check": { "type": "path-exists", "target": "apps/flow-global/eslint.config.mjs", "expect": true }
+    },
+    {
+      "id": "path-flow-factory-eslint-config",
+      "asset": "agents/flow-frontend/domain-boundary-reviewer.md",
+      "claim": "apps/flow-factory/eslint.config.mjs exists (boundary-rule source)",
+      "check": { "type": "path-exists", "target": "apps/flow-factory/eslint.config.mjs", "expect": true }
+    },
+    {
+      "id": "path-playwright-shared-index",
+      "asset": "skills/flow-frontend/e2e-test-fixture/SKILL.md",
+      "claim": "packages/playwright-shared/index.ts exists (fixture API source; note there is no src/ dir in this package)",
+      "check": { "type": "path-exists", "target": "packages/playwright-shared/index.ts", "expect": true }
+    },
+    {
+      "id": "path-playwright-shared-support",
+      "asset": "skills/flow-frontend/e2e-test-fixture/SKILL.md",
+      "claim": "packages/playwright-shared/support exists (auth/capabilities/seeding helper modules)",
+      "check": { "type": "path-exists", "target": "packages/playwright-shared/support", "expect": true }
+    },
+    {
+      "id": "major-next-16",
+      "asset": "rules/flow-frontend/nextjs-app-router.md",
+      "claim": "next major version is 16",
+      "check": { "type": "pkg-version-major", "target": "next", "expect": 16 }
+    },
+    {
+      "id": "major-react-19",
+      "asset": "rules/flow-frontend/react-patterns.md",
+      "claim": "react major version is 19",
+      "check": { "type": "pkg-version-major", "target": "react", "expect": 19 }
+    },
+    {
+      "id": "major-zod-3",
+      "asset": "rules/flow-frontend/forms.md",
+      "claim": "zod major version is 3 (a zod 4 upgrade changes schema/inference idioms)",
+      "check": { "type": "pkg-version-major", "target": "zod", "expect": 3 }
+    },
+    {
+      "id": "major-bufbuild-protobuf-1",
+      "asset": "rules/flow-frontend/protobuf.md",
+      "claim": "@bufbuild/protobuf major version is 1 (protobuf-es v1, class-based messages; v2 switches to schema-based create())",
+      "check": { "type": "pkg-version-major", "target": "@bufbuild/protobuf", "expect": 1 }
+    },
+    {
+      "id": "major-tanstack-query-5",
+      "asset": "rules/flow-frontend/tanstack-query.md",
+      "claim": "@tanstack/react-query major version is 5",
+      "check": { "type": "pkg-version-major", "target": "@tanstack/react-query", "expect": 5 }
+    },
+    {
+      "id": "engines-node-24",
+      "asset": "flow-frontend/README.md",
+      "claim": "Root package.json engines requires node >=24",
+      "check": {
+        "type": "grep",
+        "target": "package.json",
+        "pattern": "\"node\": \">=24\"",
+        "expect": true
+      }
+    },
+    {
+      "id": "engines-pnpm-10",
+      "asset": "flow-frontend/README.md",
+      "claim": "Root package.json engines requires pnpm >=10",
+      "check": {
+        "type": "grep",
+        "target": "package.json",
+        "pattern": "\"pnpm\": \">=10\"",
+        "expect": true
+      }
+    },
+    {
+      "id": "catalog-mode-strict",
+      "asset": "rules/flow-frontend/dependencies.md",
+      "claim": "pnpm-workspace.yaml sets catalogMode: strict (catalog is the enforced single source of dependency versions)",
+      "check": {
+        "type": "grep",
+        "target": "pnpm-workspace.yaml",
+        "pattern": "catalogMode: strict",
+        "expect": true
+      }
+    },
+    {
+      "id": "dep-eslint-plugin-boundaries",
+      "asset": "agents/flow-frontend/domain-boundary-reviewer.md",
+      "claim": "eslint-plugin-boundaries is in the workspace catalog (boundary enforcement exists)",
+      "check": {
+        "type": "grep",
+        "target": "pnpm-workspace.yaml",
+        "pattern": "eslint-plugin-boundaries",
+        "expect": true
+      }
+    },
+    {
+      "id": "export-cnmerge",
+      "asset": "rules/flow-frontend/shared-packages.md",
+      "claim": "cnMerge is exported from packages/ui-toolkit/src/cn-merge.ts (imported as @hadrian-mtv/ui-toolkit/cn-merge)",
+      "check": {
+        "type": "grep",
+        "target": "packages/ui-toolkit/src/cn-merge.ts",
+        "pattern": "export function cnMerge",
+        "expect": true
+      }
+    },
+    {
+      "id": "export-flowlink",
+      "asset": "rules/flow-frontend/shared-packages.md",
+      "claim": "FlowLink is exported from @hadrian-mtv/flow-navigation's index",
+      "check": {
+        "type": "grep",
+        "target": "packages/flow-navigation/src/index.ts",
+        "pattern": "export \\{ FlowLink",
+        "expect": true
+      }
+    },
+    {
+      "id": "inverse-react-compiler-not-enabled",
+      "asset": "rules/flow-frontend/react-patterns.md",
+      "claim": "React Compiler is NOT enabled (no babel-plugin-react-compiler dependency, no reactCompiler flag). Inverse claim: when this flips, the memoization policy in react-patterns.md needs a rewrite — that is an update task, not noise.",
+      "check": {
+        "type": "grep",
+        "target": ["apps", "packages"],
+        "pattern": "babel-plugin-react-compiler|reactCompiler",
+        "expect": false
+      }
+    },
+    {
+      "id": "inverse-no-queryoptions-adoption",
+      "asset": "rules/flow-frontend/tanstack-query.md",
+      "claim": "No queryOptions( usage in app/package code yet. Inverse claim guarding the 'target standard, not current practice' label in tanstack-query.md — when adoption starts and this flips, update that label rather than treating the rule as drifted.",
+      "check": {
+        "type": "grep",
+        "target": ["apps", "packages"],
+        "pattern": "queryOptions\\(",
+        "expect": false
+      }
+    }
+  ]
+}
