@@ -1,0 +1,147 @@
+{
+  "_schema": "See evals/README.md. Each case: {id, hook, matcher, stdin, env?, expect}. The runner pipes stdin into the matching hook command from the settings file below, with CLAUDE_PROJECT_DIR pointing at a temp project dir.",
+  "settings": "hooks/flow-frontend/settings.json",
+  "verified": "2026-06-11",
+  "verified_note": "Every exit code below was verified empirically by piping the stdin payload into the actual hook command with bash. CLAUDE_PROJECT_DIR was set to a temp dir; pnpm was stubbed with a script that logs its argv and exits 0, so 'command-invoked' cases assert that 'pnpm prettier --write <path>' was invoked — real Prettier formatting was not executed.",
+  "placeholders": "${CLAUDE_PROJECT_DIR} in stdin paths = the runner's temp project dir; ${OUTSIDE_DIR} = a temp dir outside it. env value null = unset the variable for that case.",
+  "cases": [
+    {
+      "id": "pre-edit-generated-blocked",
+      "hook": "PreToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/packages/fes-proto/src/generated/foo_pb.ts" } },
+      "expect": { "exit_code": 2, "stderr_contains": "BLOCK: This is a generated, lock, or CI file" }
+    },
+    {
+      "id": "pre-edit-openapi-blocked",
+      "hook": "PreToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/apps/flow-global/lib/openapi/client.ts" } },
+      "expect": { "exit_code": 2, "stderr_contains": "BLOCK: This is a generated, lock, or CI file" }
+    },
+    {
+      "id": "pre-edit-env-blocked",
+      "hook": "PreToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/.env" } },
+      "expect": { "exit_code": 2, "stderr_contains": "BLOCK: This is an environment file" }
+    },
+    {
+      "id": "pre-edit-env-local-blocked",
+      "hook": "PreToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/.env.local" } },
+      "expect": { "exit_code": 2, "stderr_contains": "BLOCK: This is an environment file" }
+    },
+    {
+      "id": "pre-edit-env-development-allowed",
+      "hook": "PreToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/.env.development" } },
+      "expect": { "exit_code": 0 }
+    },
+    {
+      "id": "pre-edit-pnpm-lock-blocked",
+      "hook": "PreToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/pnpm-lock.yaml" } },
+      "expect": { "exit_code": 2, "stderr_contains": "BLOCK: This is a generated, lock, or CI file" }
+    },
+    {
+      "id": "pre-edit-github-workflow-blocked",
+      "hook": "PreToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/.github/workflows/ci.yaml" } },
+      "expect": { "exit_code": 2, "stderr_contains": "BLOCK: This is a generated, lock, or CI file" }
+    },
+    {
+      "id": "pre-edit-examples-gen-blocked",
+      "hook": "PreToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/packages/foo/examples/gen/bar.ts" } },
+      "expect": { "exit_code": 2, "stderr_contains": "BLOCK: This is a generated, lock, or CI file" }
+    },
+    {
+      "id": "pre-edit-normal-tsx-allowed",
+      "hook": "PreToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/apps/flow-global/app/page.tsx" } },
+      "expect": { "exit_code": 0 }
+    },
+    {
+      "id": "pre-edit-missing-file-path-errors",
+      "hook": "PreToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": {} },
+      "expect": { "exit_code": 2, "stderr_contains": "HOOK ERROR: could not read .tool_input.file_path" }
+    },
+    {
+      "id": "post-format-tsx-inside-project",
+      "hook": "PostToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/apps/flow-global/app/page.tsx" } },
+      "expect": {
+        "exit_code": 0,
+        "side_effect": "command-invoked",
+        "command_contains": "prettier --write",
+        "note": "Verified via pnpm stub: stub log recorded 'pnpm prettier --write <path>'. Real Prettier not executed."
+      }
+    },
+    {
+      "id": "post-skip-file-outside-project",
+      "hook": "PostToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${OUTSIDE_DIR}/page.tsx" } },
+      "expect": { "exit_code": 0, "side_effect": "none", "note": "Containment check: pnpm stub log stayed empty — sibling-repo files are never reformatted." }
+    },
+    {
+      "id": "post-missing-file-path-errors",
+      "hook": "PostToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": {} },
+      "expect": { "exit_code": 2, "stderr_contains": "HOOK ERROR: could not read .tool_input.file_path" }
+    },
+    {
+      "id": "post-non-formattable-extension-skipped",
+      "hook": "PostToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${CLAUDE_PROJECT_DIR}/scripts/build.sh" } },
+      "expect": { "exit_code": 0, "side_effect": "none" }
+    },
+    {
+      "id": "post-unset-project-dir-errors",
+      "hook": "PostToolUse",
+      "matcher": "Edit|Write",
+      "stdin": { "tool_input": { "file_path": "${OUTSIDE_DIR}/a.tsx" } },
+      "env": { "CLAUDE_PROJECT_DIR": null },
+      "expect": { "exit_code": 2, "stderr_contains": "HOOK ERROR: $CLAUDE_PROJECT_DIR is unset" }
+    },
+    {
+      "id": "skill-log-appends-line",
+      "hook": "PreToolUse",
+      "matcher": "Skill",
+      "stdin": { "tool_input": { "skill": "new-component" } },
+      "expect": {
+        "exit_code": 0,
+        "side_effect": "log-line-appended",
+        "log_file": ".claude/skill-usage.jsonl",
+        "log_line_contains": "\"skill\":\"new-component\""
+      }
+    },
+    {
+      "id": "skill-log-fail-open-garbage-stdin",
+      "hook": "PreToolUse",
+      "matcher": "Skill",
+      "stdin": "not json at all",
+      "expect": { "exit_code": 0, "side_effect": "none", "note": "Fail-open: unparseable input still exits 0 and appends nothing." }
+    },
+    {
+      "id": "skill-log-fail-open-unset-project-dir",
+      "hook": "PreToolUse",
+      "matcher": "Skill",
+      "stdin": { "tool_input": { "skill": "x" } },
+      "env": { "CLAUDE_PROJECT_DIR": null },
+      "expect": { "exit_code": 0, "side_effect": "none", "note": "Fail-open: logging never blocks a tool call even when CLAUDE_PROJECT_DIR is unset." }
+    }
+  ]
+}

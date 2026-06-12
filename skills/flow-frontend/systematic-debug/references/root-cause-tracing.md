@@ -45,7 +45,7 @@ Error: Cannot read property 'value' of undefined
 
 ### RPC to UI Data Flow
 ```
-Server Action (app/_lib/actions.ts)
+Server Action (_lib/actions/*.actions.ts)
   → Connect RPC client (lib/proto/)
     → Proto response type (@bufteam/*)
       → rpcToForm* converter

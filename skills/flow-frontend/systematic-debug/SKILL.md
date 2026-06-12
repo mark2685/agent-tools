@@ -1,6 +1,6 @@
 ---
 name: systematic-debug
-description: Structured debugging workflow for diagnosing bugs, test failures, and unexpected behavior. Use when encountering errors, failed tests, build issues, or when user says "debug", "fix this bug", "why is this failing", or "investigate this error".
+description: Root-cause debugging workflow for the flow-frontend monorepo — Vitest failures, TypeScript strict/`lint:tsc` errors, eslint-plugin-boundaries violations, proto type mismatches, hydration mismatches, and Turbo build issues. Use when working in flow-frontend and a test, type-check, lint, or build fails, or the user says "debug this", "why is this failing", or "/systematic-debug". For non-flow-frontend code use the generic diagnose skill.
 ---
 
 # Systematic Debugging
@@ -21,7 +21,7 @@ BEFORE attempting ANY fix:
 - In this repo, common error sources: TypeScript strict mode violations, ESLint boundary violations, proto type mismatches
 
 ### Step 2: Reproduce Consistently
-- For test failures: `cd apps/flow-global && TZ=America/Los_Angeles pnpm vitest run path/to/file.test.tsx`
+- For test failures: `cd apps/<app> && TZ=America/Los_Angeles pnpm vitest run path/to/file.test.tsx` (same shape from a `packages/*` dir)
 - For type errors: `pnpm lint:tsc`
 - For lint errors: `pnpm lint`
 - For build failures: `pnpm clean && pnpm build`
@@ -31,7 +31,17 @@ BEFORE attempting ANY fix:
 - `git diff` for unstaged changes
 - `git log --oneline -10` for recent commits
 - `git diff HEAD~3` to see what changed recently
-- Check if proto types changed (`@bufteam/*` packages) — run `pnpm buf-bump:main` if needed
+- Check if proto types changed (`@bufteam/*` packages). If the pinned protos look stale,
+  **flag it and propose a user-confirmed bump** — do not run `buf-bump` yourself. It is a
+  gated, side-effecting skill that rebuilds packages and patches code; let the user invoke it.
+
+### Step 3.5: Suspect Silent Failures
+- A passing test or clean type-check is not proof the bug is gone — confirm the code path
+  actually executed. Ask: would this failure mode pass silently?
+- Watch for swallowed errors (empty `catch`, defaulting to `null`/`[]`), a mock that hides a
+  real call, a feature flag short-circuiting the path, or an effect that never ran.
+- When you fix a silent failure, add a **canary**: a positive assertion that fails loudly if
+  the workaround breaks or the bad state returns — not a guard that quietly hides it.
 
 ### Step 4: Trace the Data Flow
 - For RPC issues: trace from server action → Connect RPC client → proto types → form state
@@ -43,7 +53,8 @@ BEFORE attempting ANY fix:
 
 1. **Find working examples** — locate similar working code in the same app or domain
 2. **Compare** — what's different between working and broken code?
-3. **Check shared packages** — is the issue in `packages/ui-toolkit`, `packages/shared-utils`, or another shared package?
+3. **Check shared packages** — is the issue in a shared package rather than the app? List them
+   with `ls packages/` — do not rely on a memorized list; they drift
 4. **Check domain boundaries** — does the import violate `eslint-plugin-boundaries` rules?
 
 ## Phase 3: Hypothesis and Testing
@@ -60,7 +71,7 @@ BEFORE attempting ANY fix:
 
 ## Phase 4: Implementation
 
-1. **Run the failing test** to confirm it fails: `cd apps/flow-global && TZ=America/Los_Angeles pnpm vitest run -t "test name"`
+1. **Run the failing test** to confirm it fails: `cd apps/<app> && TZ=America/Los_Angeles pnpm vitest run -t "test name"`
 2. **Implement a single fix** addressing root cause — one change at a time
 3. **Verify the fix**:
    - `TZ=America/Los_Angeles pnpm vitest run path/to/file.test.tsx` — specific test passes
@@ -72,7 +83,7 @@ BEFORE attempting ANY fix:
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
-| `Type 'X' is not assignable to type 'Y'` in proto types | Proto dependency out of date | `pnpm buf-bump:<service>` |
+| `Type 'X' is not assignable to type 'Y'` in proto types | Proto dependency out of date | Flag for a user-confirmed `pnpm buf-bump:<service>` (don't auto-run) |
 | `Cannot find module '@hadrian-mtv/...'` | Package not built | `pnpm build` from root |
 | ESLint boundary violation | Cross-domain import | Move shared logic to `app/_lib/` or a shared package |
 | Hydration mismatch | Server/client rendering difference | Check for `typeof window`, date formatting, browser-only APIs |
